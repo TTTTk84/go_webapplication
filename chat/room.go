@@ -1,9 +1,10 @@
 package main
 
 import (
+	"log"
 	"net/http"
 
-	//"9fans.net/go/plan9/client"
+	"github.com/TTTTk84/go_webapplication/trace"
 	"github.com/gorilla/websocket"
 )
 
@@ -16,6 +17,7 @@ type room struct {
 	leave chan *client
 	//在籍しているすべてのクライアント
 	clients map[*client]bool
+	tracer trace.Tracer
 }
 
 func newRoom() *room {
@@ -28,25 +30,33 @@ func newRoom() *room {
 }
 
 func (r *room) run() {
-	select {
-	case client := <- r.join:
-		//参加
-		r.clients[client] = true
-	case client := <- r.leave:
-		//退室
-		delete(r.clients, client)
-		close(client.send)
-	case msg := <- r.forward:
-		for client := <- r.clients {
-			select {
-			case client.send <- msg:
-				//メッセージを送信
-			default:
-				//送信に失敗
+	for{
+		select {
+		case client := <- r.join:
+			//参加
+			r.clients[client] = true
+			r.tracer.Trace("新しいクライアントが参加しました")
+		case client := <- r.leave:
+			//退室
 			delete(r.clients, client)
 			close(client.send)
-			}
+			r.tracer.Trace("クライアントが退室しました")
+		case msg := <- r.forward:
+			r.tracer.Trace("メッセージを受信しました: ", string(msg))
+			// すべてのクライアントにメッセージを送信している
+			for client := range r.clients {
+				select {
+				case client.send <- msg:
+					//メッセージを送信
+					r.tracer.Trace(" -- クライアントに送信されました")
+				default:
+					//送信に失敗
+				delete(r.clients, client)
+				close(client.send)
+				r.tracer.Trace(" -- 送信に失敗しました。クライアントをクリーンアップします")
+				}
 
+			}
 		}
 	}
 }
@@ -59,12 +69,11 @@ const (
 
 var upgrader = &websocket.Upgrader{
 	ReadBufferSize: socketBufferSize,
-	WriteBufferSize: socketBufferSize
-}
+	WriteBufferSize: socketBufferSize}
 
-
+// handler作る
 func (r *room) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	socket, err := upgrader.Upgrader(w, req, nil)
+	socket, err := upgrader.Upgrade(w, req, nil)
 	if err != nil {
 		log.Fatal("ServeHTTP:", err)
 		return
