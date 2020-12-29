@@ -9,7 +9,7 @@ import (
 	"sync"
 	"text/template"
 
-	"github.com/TTTTk84/go_webapplication/trace"
+	"chat/trace"
 )
 
 //template用構造体
@@ -28,7 +28,7 @@ func (t *templateHandler) ServeHTTP (w http.ResponseWriter, r *http.Request) {
 	t.once.Do(func() {
 		// template.Must(template.New("name").Parse("text"))
 		t.temp1 =
-			template.Must(template.ParseFiles(filepath.Join("templates", t.filename)))
+			template.Must(template.ParseFiles(filepath.Join("chat/templates", t.filename)))
 	})
 	// 出力
 	err := t.temp1.Execute(w, r)
