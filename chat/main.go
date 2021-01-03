@@ -36,6 +36,7 @@ func (t *templateHandler) ServeHTTP (w http.ResponseWriter, r *http.Request) {
 		t.temp1 =
 			template.Must(template.ParseFiles(filepath.Join("chat/templates", t.filename)))
 	})
+	// r.Hostは使いたいので別枠でいれとく
 	data := map[string]interface{} {
 		"Host": r.Host,
 	}
