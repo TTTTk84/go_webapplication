@@ -11,14 +11,37 @@
     }
   </style>
 </head>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+<style>
+  u1#messages {
+    list-style: none;
+  }
+
+  u1#messages li {
+    margin-bottom: 2px;
+  }
+
+  u1#messages li img {
+    margin-right: 10px;
+  }
+</style>
 <body>
-  <ul id="messages"></ul>
-  WebSocketを使ったチャットアプリケーション
-  <form id="chatbox">
-    {{.UserData.name}}:<br />
-    <textarea></textarea>
-    <input type="submit" value="送信">
-  </form>
+  <div class="container">
+    <div class="panel panel-default">
+      <div class="panel-body">
+        <ul id="messages"></ul>
+      </div>
+    </div>
+
+    <form id="chatbox" role="form">
+      <div class="form-group">
+        <label for="message">{{.UserData.name}}からメッセージを送信</label>
+        または<a href="/logouut">サインアウト</a>
+        <textarea id="message" class="form-control"></textarea>
+      </div>
+      <input type="submit" value="送信" class="btn btn-default">
+    </form>
+  </div>
 </body>
 <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
 <script>
@@ -37,6 +60,7 @@
         return false;
       }
 
+      console.log(JSON.stringify({ "Message": msgBox.val() }));
       socket.send(JSON.stringify({ "Message": msgBox.val() }));
       msgBox.val("");
       return false;
@@ -53,8 +77,13 @@
       // メッセージを受信したときに発火する
       socket.onmessage = function (e) {
         var msg = JSON.parse(e.data)
+        console.log(msg.AvatarURL)
         messages.append(
           $("<li>").append(
+            $("<img>").attr("title", msg.Name).css({
+              width: 50,
+              verticalAlign: "middle"
+            }).attr("src", msg.AvatarURL),
             $("<strong>").text(msg.Name + ": "),
             $("<span>").text(msg.Message)
           )

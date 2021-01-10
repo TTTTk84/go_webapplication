@@ -18,6 +18,12 @@ import (
 	"github.com/stretchr/objx"
 )
 
+// 現在アクティブなAvatarの実装
+var avatars Avatar = TryAvatars{
+	UseFileSystemAvatar,
+	UseAuthAvatar,
+	UseGravatar}
+
 //template用構造体
 type templateHandler struct {
 	once sync.Once 						// 関数を一度だけ呼び出したいときに使う
@@ -43,6 +49,7 @@ func (t *templateHandler) ServeHTTP (w http.ResponseWriter, r *http.Request) {
 		data["UserData"] = objx.MustFromBase64(authCookie.Value)
 	}
 
+
 	// 出力
 	err := t.temp1.Execute(w, data)
 	if err != nil {
@@ -64,13 +71,27 @@ func main() {
 		google.New(client_id, client_secret,"http://localhost:8080/auth/callback/google"),
 	)
 
-	r := newRoom()
+	r := newRoom(UseFileSystemAvatar)
 	r.tracer = trace.New(os.Stdout)
 	http.Handle("/", MustAuth(&templateHandler{filename: "chat.html"}))
 	http.Handle("/login", &templateHandler{filename: "login.html"})
 	//http.HandleはServe.HTTPを実装していないとだめだが、http.HandleFuncはなくてもよい。
 	http.HandleFunc("/auth/", loginHandler)
 	http.Handle("/room", r)
+	http.HandleFunc("/logout", func(w http.ResponseWriter, r *http.Request) {
+		http.SetCookie(w, &http.Cookie{
+			// authcookieの値を空にして、
+			Name: "auth",
+			Value: "",
+			Path: "/",
+			MaxAge: -1,
+		})
+		w.Header()["Location"] = []string{"/chat"}
+		w.WriteHeader(http.StatusTemporaryRedirect)
+	})
+	http.Handle("/upload", &templateHandler{filename: "upload.html"})
+	http.HandleFunc("/uploader", uploaderHandler)
+	http.Handle("/avatars/",http.StripPrefix("/avatars/", http.FileServer(http.Dir("chat/avatars"))))
 
 	go r.run()
 
